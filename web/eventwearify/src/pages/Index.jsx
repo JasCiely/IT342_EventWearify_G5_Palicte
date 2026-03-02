@@ -2,6 +2,7 @@ import Header from '../components/layout/Header';
 import HeroSection from '../components/Home/HeroSection';
 import HowItWorks from '../components/Home/HowItWorks';
 import CallToAction from '../components/Home/CallToAction';
+import Footer from '../components/layout/Footer';
 
 
 const Index = () => {
@@ -13,6 +14,7 @@ const Index = () => {
         <HowItWorks />
         <CallToAction />
       </main>
+      <Footer />
     </div>
   );
 };
