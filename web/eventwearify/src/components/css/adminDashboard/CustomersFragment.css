@@ -1,0 +1,336 @@
+/* ════════════════════════════════════════════════════════════
+   LAYOUT — everything is locked, only .cf-tbody rows scroll
+   ─────────────────────────────────────────────────────────────
+   .admin-main   → height: calc(100vh - headerH), overflow-y:auto (existing)
+   .cf-root      → height:100%, display:flex column — fills admin-main exactly
+   .cf-top       → flex-shrink:0  — title / stats / toolbar, never moves
+   .cf-table-card→ flex:1, display:flex column, min-height:0 — fills rest
+     .cf-thead   → flex-shrink:0  — header row, locked
+     .cf-tbody   → flex:1, overflow-y:auto — ONLY thing that scrolls
+   .cf-pagination→ flex-shrink:0  — below card, never moves
+   ════════════════════════════════════════════════════════════ */
+
+/* ─── Root: fills admin-main ─────────────────────────────── */
+.cf-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;          /* fill the full admin-main height */
+  font-family: 'Inter', -apple-system, sans-serif;
+  max-width: 1100px;
+}
+
+/* ─── Top block: title + stats + toolbar ─────────────────── */
+.cf-top {
+  flex-shrink: 0;        /* never shrinks — always fully visible */
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+/* ─── Page header ────────────────────────────────────────── */
+.cf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-top: 0.25rem;
+}
+.cf-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.2rem;
+}
+.cf-subtitle { font-size: 0.875rem; color: #999; margin: 0; }
+
+/* ─── Stat cards ─────────────────────────────────────────── */
+.cf-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.cf-stat-card {
+  background: #fff;
+  border: 1px solid #eeecea;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s;
+}
+.cf-stat-card:hover { box-shadow: 0 4px 12px rgba(107,45,57,0.08); }
+.cf-stat-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cf-stat-icon.total    { background: rgba(107,45,57,0.1); color: #6b2d39; }
+.cf-stat-icon.active   { background: rgba(21,128,61,0.1); color: #15803d; }
+.cf-stat-icon.inactive { background: rgba(180,83,9,0.1);  color: #b45309; }
+.cf-stat-value { font-size: 1.5rem; font-weight: 700; color: #1a1a1a; margin: 0 0 0.1rem; line-height: 1; }
+.cf-stat-label { font-size: 0.78rem; color: #999; margin: 0; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ─── Toolbar ────────────────────────────────────────────── */
+.cf-toolbar {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.cf-search-wrap { position: relative; flex: 1; min-width: 220px; max-width: 380px; }
+.cf-search-icon {
+  position: absolute; left: 0.85rem; top: 50%;
+  transform: translateY(-50%); color: #bbb; pointer-events: none;
+}
+.cf-search {
+  width: 100%;
+  padding: 0.6rem 0.85rem 0.6rem 2.35rem;
+  border: 1px solid #e4e2df; border-radius: 8px;
+  font-size: 0.875rem; font-family: 'Inter', -apple-system, sans-serif;
+  background: #fff; color: #1a1a1a; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.cf-search:focus { border-color: #c4717f; box-shadow: 0 0 0 3px rgba(196,113,127,0.12); }
+.cf-search::placeholder { color: #c0bdb9; }
+.cf-filters { display: flex; align-items: center; gap: 0.4rem; }
+.cf-filter-btn {
+  padding: 0.5rem 0.9rem; border-radius: 6px;
+  border: 1px solid #e4e2df; background: #fff;
+  color: #777; font-size: 0.825rem;
+  font-family: 'Inter', -apple-system, sans-serif;
+  cursor: pointer; transition: all 0.15s;
+}
+.cf-filter-btn:hover { border-color: #c4717f; color: #6b2d39; }
+.cf-filter-btn.active { background: #6b2d39; border-color: #6b2d39; color: #fff; font-weight: 500; }
+
+/* ─── Table card ─────────────────────────────────────────── */
+.cf-table-card {
+  flex: 1;               /* takes all remaining space between top and pagination */
+  min-height: 0;         /* CRITICAL: allows flex child to shrink below content size */
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #eeecea;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  overflow: visible;     /* must NOT be hidden — dropdown needs to escape the card */
+  /* Replicate the rounded card look without overflow:hidden */
+  outline: 1px solid #eeecea;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+/* ─── Column layout (shared between thead and rows) ──────── */
+.cf-thead-row,
+.cf-row {
+  display: grid;
+  grid-template-columns: 22% 30% 18% 15% 15%;
+  align-items: center;
+}
+
+/* ─── Locked header row ──────────────────────────────────── */
+.cf-thead {
+  flex-shrink: 0;        /* never moves */
+  background: #faf9f7;
+  border-bottom: 2px solid #eeecea;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  border-radius: 12px 12px 0 0;  /* top corners match card */
+  overflow: hidden;              /* clip only the header corners */
+}
+.cf-th {
+  padding: 0.85rem 1.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* ─── Scrollable rows container ──────────────────────────── */
+.cf-tbody {
+  flex: 1;               /* fills remaining card height */
+  overflow-y: auto;      /* THE ONLY thing that scrolls */
+  overflow-x: visible;   /* allow dropdown to escape horizontally */
+  min-height: 0;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.cf-tbody::-webkit-scrollbar { display: none; }
+
+/* ─── Individual row ─────────────────────────────────────── */
+.cf-row {
+  border-bottom: 1px solid #f5f4f1;
+  transition: background 0.15s;
+  animation: rowFadeIn 0.3s ease both;
+}
+.cf-row:last-child { border-bottom: none; }
+.cf-row:hover { background: #fdf8f8; }
+
+@keyframes rowFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cf-td {
+  padding: 0.9rem 1.25rem;
+  font-size: 0.875rem;
+  color: #444;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Cell styles ────────────────────────────────────────── */
+.cf-customer-cell { display: flex; align-items: center; gap: 0.75rem; }
+.cf-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700;
+  color: rgba(255,230,233,0.9); flex-shrink: 0; letter-spacing: 0.03em;
+}
+.cf-name { font-weight: 500; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; }
+.cf-email-cell { display: flex; align-items: center; gap: 0.4rem; color: #666; overflow: hidden; }
+.cf-email-icon { color: #bbb; flex-shrink: 0; }
+.cf-date-cell  { display: flex; align-items: center; gap: 0.4rem; color: #888; }
+.cf-date-icon  { color: #ccc; flex-shrink: 0; }
+.cf-badge {
+  display: inline-flex; align-items: center;
+  padding: 0.28rem 0.75rem; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em;
+}
+.cf-badge.active   { background: rgba(21,128,61,0.1);  color: #15803d; }
+.cf-badge.inactive { background: rgba(180,83,9,0.08);  color: #b45309; }
+
+/* ─── Action menu ────────────────────────────────────────── */
+.cf-actions-wrap { position: relative; }
+.cf-menu-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px;
+  border: none; background: transparent; color: #bbb;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.cf-menu-btn:hover  { background: #f5f4f1; color: #6b2d39; }
+.cf-menu-btn.open   { background: #f0e8ea; color: #6b2d39; }
+
+.cf-dropdown {
+  background: #fff;
+  border: 1px solid #eeecea;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(44, 18, 25, 0.12), 0 2px 8px rgba(0,0,0,0.06);
+  min-width: 210px;
+  overflow: hidden;
+  animation: dropIn 0.15s ease;
+}
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Mini customer card at top of dropdown */
+.cf-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: #faf9f7;
+}
+.cf-dropdown-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700;
+  color: rgba(255,230,233,0.95);
+  flex-shrink: 0;
+}
+.cf-dropdown-info {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  overflow: hidden;
+}
+.cf-dropdown-name {
+  font-size: 0.82rem; font-weight: 600; color: #1a1a1a;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cf-dropdown-status {
+  font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.cf-dropdown-status.active   { color: #15803d; }
+.cf-dropdown-status.inactive { color: #b45309; }
+
+.cf-dropdown-divider {
+  height: 1px;
+  background: #eeecea;
+  margin: 0;
+}
+
+/* Action items */
+.cf-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%; padding: 0.7rem 1rem;
+  background: none; border: none; text-align: left;
+  font-size: 0.845rem; font-weight: 500;
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #444; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.cf-dropdown-item:hover {
+  background: #fdf8f8;
+  color: #6b2d39;
+}
+.cf-dropdown-item.danger       { color: #b45309; }
+.cf-dropdown-item.danger:hover { background: #fff8f0; color: #92400e; }
+.cf-dropdown-item.success       { color: #15803d; }
+.cf-dropdown-item.success:hover { background: #f0fdf4; color: #166534; }
+
+.cf-dropdown-icon { flex-shrink: 0; opacity: 0.75; }
+.cf-empty {
+  text-align: center; color: #bbb; font-size: 0.9rem;
+  padding: 3rem; width: 100%;
+}
+
+/* ─── Pagination ─────────────────────────────────────────── */
+.cf-pagination {
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap; gap: 0.75rem;
+  padding: 1rem 0 0.5rem;
+}
+.cf-page-info { font-size: 0.82rem; color: #aaa; }
+.cf-page-btns { display: flex; align-items: center; gap: 0.3rem; }
+.cf-page-btn {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; padding: 0 0.5rem;
+  border-radius: 6px; border: 1px solid #e4e2df;
+  background: #fff; color: #666;
+  font-size: 0.825rem; font-family: 'Inter', -apple-system, sans-serif;
+  cursor: pointer; transition: all 0.15s;
+}
+.cf-page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.cf-page-btn:not(:disabled):hover { border-color: #c4717f; color: #6b2d39; }
+.cf-page-btn.num.active { background: #6b2d39; border-color: #6b2d39; color: #fff; font-weight: 600; }
+.cf-page-ellipsis {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 32px;
+  font-size: 0.85rem; color: #bbb; user-select: none;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .cf-stats { grid-template-columns: 1fr; }
+  .cf-toolbar { flex-direction: column; align-items: stretch; }
+  .cf-search-wrap { max-width: 100%; }
+
+  /* Hide Joined column on mobile */
+  .cf-thead-row,
+  .cf-row {
+    grid-template-columns: 28% 38% 0 18% 16%;
+  }
+  .col-joined { display: none; }
+}

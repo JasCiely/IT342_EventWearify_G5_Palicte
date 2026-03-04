@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardHeader from '../../components/adminDashboard/AdminDashboardHeader';
+import CustomersFragment from './fragment/CustomersFragment';
 import {
   CheckCircle,
   LayoutDashboard,
@@ -26,10 +27,23 @@ const NAV_ITEMS = [
   { key: 'profile',   label: 'Profile',   icon: UserCircle,       path: '/admin/profile' },
 ];
 
+// Render the correct fragment based on active nav key
+const renderFragment = (key) => {
+  switch (key) {
+    case 'customers': return <CustomersFragment />;
+    default:
+      return (
+        <p style={{ color: '#bbb', fontSize: '0.95rem', marginTop: '0.5rem' }}>
+          {key.charAt(0).toUpperCase() + key.slice(1)} — coming soon.
+        </p>
+      );
+  }
+};
+
 const AdminDashboard = () => {
-  const navigate   = useNavigate();
-  const location   = useLocation();
-  const firstName  = localStorage.getItem('firstName') || 'Admin';
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const firstName = localStorage.getItem('firstName') || 'Admin';
 
   const [collapsed, setCollapsed] = useState(false);
   const [toast, setToast]         = useState({ show: false, message: '' });
@@ -76,7 +90,6 @@ const AdminDashboard = () => {
         {/* Fixed sidebar */}
         <aside className={`admin-sidebar ${collapsed ? 'collapsed' : ''}`}>
 
-          {/* Brand mark inside sidebar */}
           {!collapsed && (
             <div className="sidebar-brand">
               <span className="sidebar-brand-dot" />
@@ -100,7 +113,6 @@ const AdminDashboard = () => {
             ))}
           </nav>
 
-          {/* Collapse toggle at bottom */}
           <button
             className="sidebar-toggle"
             onClick={() => setCollapsed(prev => !prev)}
@@ -111,11 +123,9 @@ const AdminDashboard = () => {
           </button>
         </aside>
 
-        {/* Scrollable main content */}
+        {/* Main content — renders the active fragment */}
         <main className="admin-main">
-          <p style={{ color: '#aaa', fontSize: '0.95rem' }}>
-            Admin dashboard content coming soon.
-          </p>
+          {renderFragment(activeKey)}
         </main>
       </div>
 
