@@ -39,6 +39,17 @@ public class AdminUserController {
     }
 
     /**
+     * GET /api/admin/users/{id}
+     * 
+     * Fetch a single customer's full details
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<UserSummaryResponse> getUserById(@PathVariable String id) {
+        UserSummaryResponse user = adminUserService.getUserById(id);
+        return ResponseEntity.ok(user);
+    }
+
+    /**
      * PATCH /api/admin/users/{id}/status
      * Body: { "active": true | false }
      */

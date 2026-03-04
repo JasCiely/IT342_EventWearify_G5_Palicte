@@ -56,4 +56,12 @@ public class AdminUserServiceImpl implements AdminUserService {
         user.setActive(active);
         return UserSummaryResponse.from(userRepository.save(user));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserSummaryResponse getUserById(String id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceAlreadyExistsException("User", "id", id));
+        return UserSummaryResponse.from(user);
+    }
 }
