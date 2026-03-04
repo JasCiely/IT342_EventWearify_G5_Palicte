@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import Auth from './pages/Auth';
-import AdminChangePassword from './pages/AdminChangePassword';
-import AdminDashboard from './pages/AdminDashboard';
+import AdminChangePassword from './pages/admin/AdminChangePassword';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 const AdminRoute = ({ children }) => {
   const role = localStorage.getItem('userRole');

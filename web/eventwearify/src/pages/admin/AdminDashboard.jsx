@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import DashboardHeader from '../components/adminDashboard/AdminDashboardHeader';
+import DashboardHeader from '../../components/adminDashboard/AdminDashboardHeader';
 import {
   CheckCircle,
   LayoutDashboard,
@@ -12,8 +12,8 @@ import {
   ChevronRight,
   Contact,
 } from 'lucide-react';
-import '../components/css/adminDashboard/AdminDashboardHeader.css';
-import '../components/css/adminDashboard/AdminDashboard.css';
+import '../../components/css/adminDashboard/AdminDashboardHeader.css';
+import '../../components/css/adminDashboard/AdminDashboard.css';
 
 const API_BASE_URL = 'http://localhost:8080/api/auth';
 
