@@ -4,10 +4,11 @@ import Auth from './pages/Auth';
 import AdminChangePassword from './pages/admin/AdminChangePassword';
 import AdminDashboard from './pages/admin/AdminDashboard';
 
+// Guard: only admins who have completed password change can access the dashboard
 const AdminRoute = ({ children }) => {
-  const role = localStorage.getItem('userRole');
+  const role            = localStorage.getItem('userRole');
   const isAuthenticated = localStorage.getItem('isAuthenticated');
-  const firstLogin = localStorage.getItem('firstLogin');
+  const firstLogin      = localStorage.getItem('firstLogin');
 
   if (!isAuthenticated || role !== 'ADMIN') return <Navigate to="/auth" replace />;
   if (firstLogin === 'true') return <Navigate to="/admin/change-password" replace />;
@@ -15,8 +16,9 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+// Guard: only admins on first login can access the change-password page
 const AdminFirstLoginRoute = ({ children }) => {
-  const role = localStorage.getItem('userRole');
+  const role       = localStorage.getItem('userRole');
   const firstLogin = localStorage.getItem('firstLogin');
 
   if (role !== 'ADMIN') return <Navigate to="/" replace />;
@@ -42,8 +44,9 @@ function App() {
           }
         />
 
+        {/* All /admin/* paths go to AdminDashboard — sidebar fragments handle the rest */}
         <Route
-          path="/admin/dashboard"
+          path="/admin/*"
           element={
             <AdminRoute>
               <AdminDashboard />
