@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../components/css/pages/AdminChangePassword.css';
+import '../../components/css/pages/AdminChangePassword.css';
 import {
   Lock,
   Eye,
@@ -11,7 +11,7 @@ import {
   ArrowRight,
   Info,
 } from 'lucide-react';
-import logo from '../assets/logo.png';
+import logo from '../../assets/logo.png';
 
 const API_BASE_URL = 'http://localhost:8080/api/auth';
 
