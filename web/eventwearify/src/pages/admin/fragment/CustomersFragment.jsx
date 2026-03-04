@@ -7,6 +7,7 @@ import {
   Eye, UserMinus, UserPlus, Loader2, AlertCircle,
 } from 'lucide-react';
 import { fetchCustomers, updateCustomerStatus } from '../../../services/customerService';
+import CustomerDetailModal from '../../../components/adminDashboard/CustomerDetailModal';
 import '../../../components/css/adminDashboard/CustomersFragment.css';
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -32,7 +33,7 @@ const getPageNumbers = (page, totalPages) => {
 const PAGE_SIZE = 8;
 
 /* ── Memoized Row Component ─────────────────────────────── */
-const CustomerRow = React.memo(({ customer, index, openMenu, setOpenMenu, togglingId, handleToggleStatus, btnRefs }) => {
+const CustomerRow = React.memo(({ customer, index, openMenu, setOpenMenu, togglingId, handleToggleStatus, handleViewDetails, btnRefs }) => {
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
@@ -94,6 +95,7 @@ const CustomerRow = React.memo(({ customer, index, openMenu, setOpenMenu, toggli
               customer={customer}
               togglingId={togglingId}
               handleToggleStatus={handleToggleStatus}
+              handleViewDetails={handleViewDetails}
               setOpenMenu={setOpenMenu}
               pos={pos}
             />
@@ -107,7 +109,7 @@ const CustomerRow = React.memo(({ customer, index, openMenu, setOpenMenu, toggli
 CustomerRow.displayName = 'CustomerRow';
 
 /* ── Memoized Dropdown Content ─────────────────────────── */
-const DropdownContent = React.memo(({ customer, togglingId, handleToggleStatus, setOpenMenu, pos }) => {
+const DropdownContent = React.memo(({ customer, togglingId, handleToggleStatus, handleViewDetails, setOpenMenu, pos }) => {
   const portalRoot = useRef(null);
 
   useEffect(() => {
@@ -134,7 +136,13 @@ const DropdownContent = React.memo(({ customer, togglingId, handleToggleStatus, 
         </div>
       </div>
       <div className="cf-dropdown-divider" />
-      <button className="cf-dropdown-item" onClick={() => setOpenMenu(null)}>
+      <button 
+        className="cf-dropdown-item" 
+        onClick={() => {
+          handleViewDetails(customer.id);
+          setOpenMenu(null);
+        }}
+      >
         <Eye size={14} className="cf-dropdown-icon" />
         View Details
       </button>
@@ -168,6 +176,10 @@ export default function CustomersFragment() {
 
   const [openMenu,   setOpenMenu]   = useState(null);
   const [togglingId, setTogglingId] = useState(null);
+
+  // Detail modal state
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
 
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
 
@@ -282,6 +294,12 @@ export default function CustomersFragment() {
     }
   }, [loadStats]);
 
+  /* ── View Details handler ──────────────────────────── */
+  const handleViewDetails = useCallback((customerId) => {
+    setSelectedCustomerId(customerId);
+    setDetailModalOpen(true);
+  }, []);
+
   /* ── Memoized page numbers ──────────────────────────── */
   const pageNums = useMemo(() => getPageNumbers(page, totalPages), [page, totalPages]);
   
@@ -387,6 +405,7 @@ export default function CustomersFragment() {
               setOpenMenu={setOpenMenu}
               togglingId={togglingId}
               handleToggleStatus={handleToggleStatus}
+              handleViewDetails={handleViewDetails}
               btnRefs={btnRefs}
             />
           ))}
@@ -425,6 +444,13 @@ export default function CustomersFragment() {
           </div>
         </div>
       )}
+
+      {/* ── Customer Detail Modal ── */}
+      <CustomerDetailModal 
+        customerId={selectedCustomerId}
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+      />
 
     </div>
   );

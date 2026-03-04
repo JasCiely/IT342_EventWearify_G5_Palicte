@@ -1,12 +1,11 @@
 // src/services/customerService.js
-// Matches your AuthServiceImpl which stores token in AuthResponse.token
-// and your JwtService which puts "role" + "userId" as claims.
+// Matches your AdminUserService interface and AuthResponse token storage
 
 const BASE_URL = 'http://localhost:8080/api/admin/users';
 
 /**
- * Reads the JWT that your AuthController returns in AuthResponse.token.
- * Your frontend stores it after login — adjust the key below if needed.
+ * Reads the JWT token from localStorage or sessionStorage.
+ * Adjust the key based on where your AuthResponse.token is stored after login.
  * Common keys: 'token', 'authToken', 'jwt', 'accessToken'
  */
 const getToken = () =>
@@ -21,7 +20,7 @@ const authHeaders = () => ({
 /**
  * GET /api/admin/users?page=0&size=8&search=&status=
  *
- * Returns Spring Page wrapped in UserPageResponse:
+ * Returns UserPageResponse:
  * {
  *   content:       UserSummaryResponse[],
  *   page:          number,   // 0-based
@@ -30,11 +29,18 @@ const authHeaders = () => ({
  *   totalPages:    number,
  * }
  */
-export async function fetchCustomers({ page = 0, size = 8, search = '', status = '' } = {}) {
+export async function fetchCustomers({ 
+  page = 0, 
+  size = 8, 
+  search = '', 
+  status = '',
+  signal 
+} = {}) {
   const params = new URLSearchParams({ page, size, search, status });
   const res = await fetch(`${BASE_URL}?${params}`, {
     method: 'GET',
     headers: authHeaders(),
+    signal, // Supports request cancellation
   });
 
   if (res.status === 401 || res.status === 403) {
@@ -49,9 +55,36 @@ export async function fetchCustomers({ page = 0, size = 8, search = '', status =
 }
 
 /**
+ * GET /api/admin/users/{id}
+ *
+ * Fetch a single customer's full details.
+ * Returns a UserSummaryResponse with all available fields.
+ */
+export async function fetchCustomerDetail(id) {
+  const res = await fetch(`${BASE_URL}/${id}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('Unauthorized — please log in again.');
+  }
+  if (res.status === 404) {
+    throw new Error('Customer not found.');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Failed to fetch customer (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
  * PATCH /api/admin/users/{id}/status
  * Body: { active: boolean }
  *
+ * Updates customer active status.
  * Returns updated UserSummaryResponse.
  */
 export async function updateCustomerStatus(id, active) {
@@ -63,6 +96,9 @@ export async function updateCustomerStatus(id, active) {
 
   if (res.status === 401 || res.status === 403) {
     throw new Error('Unauthorized — please log in again.');
+  }
+  if (res.status === 404) {
+    throw new Error('Customer not found.');
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
