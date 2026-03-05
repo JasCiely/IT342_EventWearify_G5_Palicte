@@ -18,13 +18,16 @@ public interface UserRepository extends JpaRepository<User, String> {
 
         boolean existsByEmail(String email);
 
-        // ── NEW: check if a phone number is already taken by another user ──
+        // Used by DataSeeder — skips seeding if ANY admin exists,
+        // regardless of what details the admin has changed
+        boolean existsByRole(Role role);
+
+        // Check if phone is taken by someone OTHER than the current user
         boolean existsByPhone(String phone);
 
-        // ── NEW: check if phone is taken by someone OTHER than the current user ──
         boolean existsByPhoneAndIdNot(String phone, String id);
 
-        // ── NEW: check if email is taken by someone OTHER than the current user ──
+        // Check if email is taken by someone OTHER than the current user
         boolean existsByEmailAndIdNot(String email, String id);
 
         @Query("SELECT u FROM User u WHERE " +
