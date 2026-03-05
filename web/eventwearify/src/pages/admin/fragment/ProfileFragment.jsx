@@ -236,7 +236,18 @@ const ProfileFragment = () => {
       setEditFields(newProfile);
       saveLocalProfile(newProfile);
       setEditMode(false);
-      showToast('success', 'Profile updated successfully!');
+
+      // If email changed — JWT token is now stale (still has old email)
+      // Force re-login so a fresh token is issued with the new email
+      if (updated.emailChanged) {
+        showToast('success', 'Email updated! Please log in again with your new email.');
+        setTimeout(() => {
+          localStorage.clear();
+          window.location.href = '/auth';
+        }, 2500);
+      } else {
+        showToast('success', 'Profile updated successfully!');
+      }
     } catch (err) {
       showToast('error', err.message || 'Could not save profile.');
     } finally {

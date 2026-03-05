@@ -23,4 +23,5 @@ public class ProfileResponse {
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
+    private boolean emailChanged;
 }

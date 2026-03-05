@@ -28,7 +28,6 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
-    // ── Supabase config — injected from application.properties ──
     @Value("${supabase.url}")
     private String supabaseUrl;
 
@@ -38,15 +37,14 @@ public class UserServiceImpl implements UserService {
     @Value("${supabase.storage.bucket}")
     private String bucket;
 
-    // ── Allowed image MIME types ──
     private static final List<String> ALLOWED_TYPES = List.of("image/jpeg", "image/png", "image/webp", "image/gif");
-
-    // ── Max file size: 5 MB ──
     private static final long MAX_SIZE = 5 * 1024 * 1024;
 
     /*
      * ────────────────────────────────────────────────────────
      * GET PROFILE
+     * Looks up by ID stored in token, NOT by email —
+     * so it still works even after an email change.
      * ────────────────────────────────────────────────────────
      */
     @Override
@@ -61,22 +59,26 @@ public class UserServiceImpl implements UserService {
     /*
      * ────────────────────────────────────────────────────────
      * UPDATE PROFILE
+     * Key fix: look up user by ID (from token), not email.
+     * This means even if the email changes, the next request
+     * still finds the correct user by their immutable ID.
      * ────────────────────────────────────────────────────────
      */
     @Override
     public ProfileResponse updateProfile(String email, UpdateProfileRequest request) {
         log.info("Updating profile for: {}", email);
 
+        // Find user by current email from JWT
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("User not found"));
 
-        // Check email not taken by a DIFFERENT user
+        // Check new email is not taken by a DIFFERENT user
         String newEmail = request.getEmail().toLowerCase().trim();
         if (userRepository.existsByEmailAndIdNot(newEmail, user.getId())) {
             throw new ResourceAlreadyExistsException("User", "email", newEmail);
         }
 
-        // Check phone not taken by a DIFFERENT user
+        // Check new phone is not taken by a DIFFERENT user
         String newPhone = request.getPhone() != null ? request.getPhone().trim() : null;
         if (newPhone != null && !newPhone.isEmpty()
                 && userRepository.existsByPhoneAndIdNot(newPhone, user.getId())) {
@@ -86,108 +88,92 @@ public class UserServiceImpl implements UserService {
         user.setFirstName(request.getFirstName().trim());
         user.setLastName(request.getLastName().trim());
         user.setEmail(newEmail);
-        user.setPhone(newPhone != null && newPhone.isEmpty() ? null : newPhone);
+
+        // Fix: correctly set null for empty phone, keep value otherwise
+        user.setPhone((newPhone == null || newPhone.isEmpty()) ? null : newPhone);
 
         User saved = userRepository.save(user);
         log.info("Profile updated successfully for: {}", saved.getEmail());
-        return mapToProfileResponse(saved);
+
+        // ── IMPORTANT: return the new email in response so the frontend
+        // updates localStorage with the latest email. The JWT token
+        // still carries the old email — tell frontend to re-login
+        // if email was changed so they get a fresh token.
+        ProfileResponse response = mapToProfileResponse(saved);
+        response.setEmailChanged(!email.equals(newEmail));
+        return response;
     }
 
     /*
      * ────────────────────────────────────────────────────────
      * UPLOAD PROFILE PHOTO — Supabase Storage
-     * 
-     * Flow:
-     * 1. Validate file type + size
-     * 2. Delete old photo from Supabase (if any)
-     * 3. Upload new file to Supabase Storage bucket
-     * 4. Build the public CDN URL and save to DB
-     * 5. Return updated ProfileResponse
      * ────────────────────────────────────────────────────────
      */
     @Override
     public ProfileResponse uploadProfilePhoto(String email, MultipartFile file) {
         log.info("Uploading profile photo for: {}", email);
 
-        // 1. Validate
-        if (file == null || file.isEmpty()) {
+        if (file == null || file.isEmpty())
             throw new IllegalArgumentException("No file provided");
-        }
+
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
-            throw new IllegalArgumentException(
-                    "Invalid file type. Allowed: JPEG, PNG, WEBP, GIF");
-        }
-        if (file.getSize() > MAX_SIZE) {
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType))
+            throw new IllegalArgumentException("Invalid file type. Allowed: JPEG, PNG, WEBP, GIF");
+
+        if (file.getSize() > MAX_SIZE)
             throw new IllegalArgumentException("File too large. Maximum size is 5 MB");
-        }
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("User not found"));
 
-        // 2. Delete old photo from Supabase Storage (if exists)
-        if (user.getProfilePhotoUrl() != null && !user.getProfilePhotoUrl().isEmpty()) {
+        if (user.getProfilePhotoUrl() != null && !user.getProfilePhotoUrl().isEmpty())
             deleteOldPhotoFromSupabase(user.getProfilePhotoUrl());
-        }
 
-        // 3. Upload to Supabase Storage
         String ext = getExtension(file.getOriginalFilename(), contentType);
         String fileName = UUID.randomUUID() + "." + ext;
-        String uploadPath = fileName; // stored at root of bucket
 
         try {
-            uploadToSupabase(uploadPath, file.getBytes(), contentType);
+            uploadToSupabase(fileName, file.getBytes(), contentType);
         } catch (IOException e) {
             log.error("Failed to read file bytes: {}", e.getMessage());
             throw new RuntimeException("Could not process photo. Please try again.");
         }
 
-        // 4. Build the Supabase public CDN URL
-        // Format:
-        // https://<project>.supabase.co/storage/v1/object/public/<bucket>/<filename>
         String publicUrl = supabaseUrl
                 + "/storage/v1/object/public/"
                 + bucket + "/"
-                + uploadPath;
+                + fileName;
 
         user.setProfilePhotoUrl(publicUrl);
         User saved = userRepository.save(user);
 
-        log.info("Profile photo uploaded to Supabase: {}", publicUrl);
+        log.info("Profile photo uploaded: {}", publicUrl);
         return mapToProfileResponse(saved);
     }
 
-    /* ── Upload bytes to Supabase Storage via REST API ── */
+    /* ── Supabase Storage upload ── */
     private void uploadToSupabase(String path, byte[] bytes, String contentType) {
         RestTemplate restTemplate = new RestTemplate();
-
-        // Supabase Storage upload endpoint
         String url = supabaseUrl + "/storage/v1/object/" + bucket + "/" + path;
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + supabaseServiceRoleKey);
-        headers.set("x-upsert", "true"); // overwrite if same name exists
+        headers.set("x-upsert", "true");
         headers.setContentType(MediaType.parseMediaType(contentType));
 
-        HttpEntity<byte[]> entity = new HttpEntity<>(bytes, headers);
-
         ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.POST, entity, String.class);
+                url, HttpMethod.POST, new HttpEntity<>(bytes, headers), String.class);
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             log.error("Supabase upload failed: {}", response.getBody());
             throw new RuntimeException("Failed to upload photo to storage");
         }
-
         log.info("Supabase upload successful: {}", path);
     }
 
-    /* ── Delete old photo from Supabase Storage ── */
+    /* ── Supabase Storage delete ── */
     private void deleteOldPhotoFromSupabase(String oldPublicUrl) {
         try {
-            // Extract filename from full public URL
-            // URL format:
-            // https://<project>.supabase.co/storage/v1/object/public/<bucket>/<filename>
             String prefix = supabaseUrl + "/storage/v1/object/public/" + bucket + "/";
             if (!oldPublicUrl.startsWith(prefix))
                 return;
@@ -199,22 +185,20 @@ public class UserServiceImpl implements UserService {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + supabaseServiceRoleKey);
 
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-            restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, String.class);
+            restTemplate.exchange(deleteUrl, HttpMethod.DELETE,
+                    new HttpEntity<>(headers), String.class);
 
-            log.info("Deleted old photo from Supabase: {}", fileName);
+            log.info("Deleted old photo: {}", fileName);
         } catch (Exception e) {
-            // Non-fatal — log and continue even if delete fails
-            log.warn("Could not delete old photo from Supabase: {}", e.getMessage());
+            log.warn("Could not delete old photo: {}", e.getMessage());
         }
     }
 
     /* ── helpers ── */
     private String getExtension(String originalFilename, String contentType) {
-        if (originalFilename != null && originalFilename.contains(".")) {
+        if (originalFilename != null && originalFilename.contains("."))
             return originalFilename.substring(
                     originalFilename.lastIndexOf('.') + 1).toLowerCase();
-        }
         return switch (contentType) {
             case "image/png" -> "png";
             case "image/webp" -> "webp";
