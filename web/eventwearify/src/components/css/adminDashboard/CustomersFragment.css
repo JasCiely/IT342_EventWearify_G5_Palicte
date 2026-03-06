@@ -1,27 +1,19 @@
 /* ════════════════════════════════════════════════════════════
    LAYOUT — everything is locked, only .cf-tbody rows scroll
-   ─────────────────────────────────────────────────────────────
-   .admin-main   → height: calc(100vh - headerH), overflow-y:auto (existing)
-   .cf-root      → height:100%, display:flex column — fills admin-main exactly
-   .cf-top       → flex-shrink:0  — title / stats / toolbar, never moves
-   .cf-table-card→ flex:1, display:flex column, min-height:0 — fills rest
-     .cf-thead   → flex-shrink:0  — header row, locked
-     .cf-tbody   → flex:1, overflow-y:auto — ONLY thing that scrolls
-   .cf-pagination→ flex-shrink:0  — below card, never moves
    ════════════════════════════════════════════════════════════ */
 
 /* ─── Root: fills admin-main ─────────────────────────────── */
 .cf-root {
   display: flex;
   flex-direction: column;
-  height: 100%;          /* fill the full admin-main height */
+  width: 100%;
+  min-height: 100%;
   font-family: 'Inter', -apple-system, sans-serif;
-  max-width: 1100px;
 }
 
 /* ─── Top block: title + stats + toolbar ─────────────────── */
 .cf-top {
-  flex-shrink: 0;        /* never shrinks — always fully visible */
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -109,18 +101,15 @@
 
 /* ─── Table card ─────────────────────────────────────────── */
 .cf-table-card {
-  flex: 1;               /* takes all remaining space between top and pagination */
-  min-height: 0;         /* CRITICAL: allows flex child to shrink below content size */
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: #fff;
   border: 1px solid #eeecea;
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  overflow: visible;     /* must NOT be hidden — dropdown needs to escape the card */
-  /* Replicate the rounded card look without overflow:hidden */
-  outline: 1px solid #eeecea;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  overflow: visible;
 }
 
 /* ─── Column layout (shared between thead and rows) ──────── */
@@ -133,12 +122,12 @@
 
 /* ─── Locked header row ──────────────────────────────────── */
 .cf-thead {
-  flex-shrink: 0;        /* never moves */
+  flex-shrink: 0;
   background: #faf9f7;
   border-bottom: 2px solid #eeecea;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  border-radius: 12px 12px 0 0;  /* top corners match card */
-  overflow: hidden;              /* clip only the header corners */
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
 }
 .cf-th {
   padding: 0.85rem 1.25rem;
@@ -152,9 +141,9 @@
 
 /* ─── Scrollable rows container ──────────────────────────── */
 .cf-tbody {
-  flex: 1;               /* fills remaining card height */
-  overflow-y: auto;      /* THE ONLY thing that scrolls */
-  overflow-x: visible;   /* allow dropdown to escape horizontally */
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: visible;
   min-height: 0;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -230,7 +219,6 @@
   to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
 
-/* Mini customer card at top of dropdown */
 .cf-dropdown-header {
   display: flex;
   align-items: center;
@@ -267,7 +255,6 @@
   margin: 0;
 }
 
-/* Action items */
 .cf-dropdown-item {
   display: flex;
   align-items: center;
@@ -346,14 +333,12 @@
 }
 .cf-retry-btn:hover { background: #b45309; color: #fff; }
 
-/* Spin animation for Loader2 icon */
 @keyframes cf-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 .cf-spin { animation: cf-spin 0.8s linear infinite; }
 
-/* Row being toggled — dim it slightly */
 .cf-row.toggling { opacity: 0.5; pointer-events: none; }
 
 /* ─── Responsive ─────────────────────────────────────────── */
@@ -362,7 +347,6 @@
   .cf-toolbar { flex-direction: column; align-items: stretch; }
   .cf-search-wrap { max-width: 100%; }
 
-  /* Hide Joined column on mobile */
   .cf-thead-row,
   .cf-row {
     grid-template-columns: 28% 38% 0 18% 16%;
